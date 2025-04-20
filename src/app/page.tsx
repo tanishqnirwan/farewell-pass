@@ -1,6 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { ArrowRight, FileSpreadsheet, Users, QrCode } from "lucide-react";
+import { ArrowRight, Users, QrCode } from "lucide-react";
 import Link from "next/link";
 
 export default function Home() {
