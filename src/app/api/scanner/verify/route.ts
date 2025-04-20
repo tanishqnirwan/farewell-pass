@@ -55,7 +55,15 @@ export async function POST(request: Request) {
         }, { status: 400 });
       }
       
-     
+      // Insert verification record
+      await client.query(
+        `INSERT INTO pass_verifications (student_id, pass_id, verification_count, last_verified_at)
+         VALUES ($1, $2, 1, NOW())
+         ON CONFLICT (student_id, pass_id) 
+         DO UPDATE SET verification_count = pass_verifications.verification_count + 1, 
+                       last_verified_at = NOW()`,
+        [studentId, passId]
+      );
       
       await client.query('COMMIT');
       

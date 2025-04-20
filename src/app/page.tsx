@@ -16,10 +16,7 @@ export default function Home() {
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <FileSpreadsheet className="h-5 w-5" />
-              Upload Excel
-            </CardTitle>
+          
             <CardDescription>
               Upload student data from Excel files
             </CardDescription>
