@@ -8,33 +8,31 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Camera, CameraOff, X, CheckCircle2, XCircle } from "lucide-react";
 import { Alert } from "@/components/ui/alert";
 import { QrScanner } from "@/app/components/qr-scanner";
-import { toast } from "sonner";
-import Navbar from "@/app/components/Navbar";
 
+// Define types for scan results
 interface ScanResult {
+  success: boolean;
+  data?: StudentData;
+  message?: string;
+}
+
+interface StudentData {
   id: string;
   studentId: string;
   name: string;
   email: string;
-  rollNumber: string;
-  verified?: boolean;
-  timestamp?: string;
-  verificationCount?: number;
+  rollNumber?: string;
+  [key: string]: unknown;
 }
 
 export default function ScannerPage() {
   const [scanning, setScanning] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [isFullscreen, setIsFullscreen] = useState(false);
   const [scanEnabled, setScanEnabled] = useState(true);
   const [showNotification, setShowNotification] = useState(false);
-  const [lastScanResult, setLastScanResult] = useState<{
-    success: boolean;
-    data?: any;
-    message?: string;
-  } | null>(null);
+  const [lastScanResult, setLastScanResult] = useState<ScanResult | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
-  const overlayRef = useRef<HTMLDivElement>(null);
+
   const videoRef = useRef<HTMLVideoElement>(null);
   
   // Sound references
@@ -59,19 +57,6 @@ export default function ScannerPage() {
           }
         });
     }
-    
-    // Enable wake lock to prevent screen from sleeping
-    async function requestWakeLock() {
-      try {
-        if ('wakeLock' in navigator) {
-          await (navigator as any).wakeLock.request('screen');
-        }
-      } catch (err) {
-        console.error('Wake Lock error:', err);
-      }
-    }
-    
-    requestWakeLock();
 
     // Hide navbar when scanning
     if (scanning) {
@@ -101,7 +86,6 @@ export default function ScannerPage() {
     try {
       if (containerRef.current?.requestFullscreen) {
         await containerRef.current.requestFullscreen();
-        setIsFullscreen(true);
         setScanning(true);
       }
     } catch (err) {
@@ -112,7 +96,6 @@ export default function ScannerPage() {
   const exitFullscreen = () => {
     if (document.fullscreenElement) {
       document.exitFullscreen();
-      setIsFullscreen(false);
       setScanning(false);
     }
   };
@@ -135,7 +118,7 @@ export default function ScannerPage() {
     }
   };
   
-  const handleScanResult = (success: boolean, message: string, data?: any) => {
+  const handleScanResult = (success: boolean, message: string, data?: StudentData) => {
     // Disable scanning temporarily
     setScanEnabled(false);
     setShowNotification(true);
@@ -161,7 +144,7 @@ export default function ScannerPage() {
     if (!data || !scanEnabled) return;
     
     try {
-      const parsedData = JSON.parse(data);
+      const parsedData = JSON.parse(data) as StudentData;
       
       if (!parsedData.id || !parsedData.studentId || !parsedData.name || !parsedData.email) {
         handleScanResult(false, "Invalid QR code format");
@@ -199,9 +182,9 @@ export default function ScannerPage() {
     }
   };
   
-  const handleError = (err: any) => {
+  const handleError = (err: Error) => {
     console.error("QR scanning error:", err);
-    setError(err instanceof Error ? err.message : err);
+    setError(err instanceof Error ? err.message : String(err));
   };
 
   return (
@@ -249,7 +232,14 @@ export default function ScannerPage() {
                 <div className="absolute inset-0">
                   <QrScanner 
                     onScan={handleScan}
-                    onError={handleError}
+                    onError={(error: string | Error) => {
+                      if (error instanceof Error) {
+                        handleError(error);
+                      } else {
+                        console.error("QR scanning error:", error);
+                        setError(error);
+                      }
+                    }}
                     constraints={{
                       facingMode: "environment",
                       width: { ideal: 1280 },

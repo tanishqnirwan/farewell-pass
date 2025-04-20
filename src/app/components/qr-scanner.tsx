@@ -6,7 +6,7 @@ import jsQR from "jsqr";
 
 interface QrScannerProps {
   onScan: (data: string | null) => void;
-  onError: (error: any) => void;
+  onError: (error: Error | string) => void;
   constraints?: MediaTrackConstraints;
   videoRef?: React.RefObject<HTMLVideoElement | null>;
 }
@@ -125,7 +125,7 @@ export function QrScanner({ onScan, onError, constraints, videoRef: externalVide
         stream.getTracks().forEach(track => track.stop());
       }
     };
-  }, [onScan, onError, constraints]);
+  }, [onScan, onError, constraints, videoRef]);
 
   if (hasPermission === false) {
     return (
@@ -148,17 +148,12 @@ export function QrScanner({ onScan, onError, constraints, videoRef: externalVide
     <div className="relative w-full h-full">
       <video 
         ref={videoRef} 
-        className="absolute inset-0 w-full h-full" 
-        style={{ 
-          objectFit: "cover",
-          transform: "scaleX(-1)" // Mirror the camera feed for more natural interaction
-        }}
+        className="w-full h-full object-cover"
+        autoPlay
+        muted
+        playsInline
       />
-      <canvas 
-        ref={canvasRef} 
-        className="absolute top-0 left-0 opacity-0 pointer-events-none" 
-      />
-      <div className="absolute inset-0 border-2 border-primary border-dashed rounded-lg pointer-events-none" />
+      <canvas ref={canvasRef} className="hidden" />
     </div>
   );
 }

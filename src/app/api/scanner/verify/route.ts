@@ -55,18 +55,7 @@ export async function POST(request: Request) {
         }, { status: 400 });
       }
       
-      // Record the verification
-      const verificationResult = await client.query(
-        `INSERT INTO pass_verifications (pass_id, student_id, verification_count, last_verified_at)
-         VALUES ($1, $2, 1, CURRENT_TIMESTAMP)
-         ON CONFLICT (pass_id, student_id)
-         DO UPDATE SET 
-           verification_count = 1,
-           last_verified_at = CURRENT_TIMESTAMP,
-           updated_at = CURRENT_TIMESTAMP
-         RETURNING verification_count, last_verified_at`,
-        [passId, studentId]
-      );
+     
       
       await client.query('COMMIT');
       

@@ -1,5 +1,7 @@
 // src/app/lib/db.ts
 import { Pool, QueryResult, QueryResultRow } from 'pg';
+import fs from 'fs';
+import path from 'path';
 
 const pool = new Pool({
   user: process.env.POSTGRES_USER,
@@ -13,7 +15,7 @@ const pool = new Pool({
 });
 
 export interface Transaction {
-  query: <T extends QueryResultRow>(text: string, params?: any[]) => Promise<QueryResult<T>>;
+  query: <T extends QueryResultRow>(text: string, params?: unknown[]) => Promise<QueryResult<T>>;
   commit: () => Promise<void>;
   rollback: () => Promise<void>;
 }
@@ -23,7 +25,7 @@ export async function beginTransaction(): Promise<Transaction> {
   await client.query('BEGIN');
   
   return {
-    query: async <T extends QueryResultRow>(text: string, params?: any[]) => {
+    query: async <T extends QueryResultRow>(text: string, params?: unknown[]) => {
       return client.query<T>(text, params);
     },
     commit: async () => {
@@ -53,7 +55,7 @@ export async function withTransaction<T>(
 
 export async function executeQuery<T extends QueryResultRow>(
   text: string,
-  params?: any[]
+  params?: unknown[]
 ): Promise<QueryResult<T>> {
   try {
     return await pool.query<T>(text, params);
@@ -68,7 +70,7 @@ export const query = executeQuery;
 
 export async function executeQueryWithRetry<T extends QueryResultRow>(
   text: string,
-  params?: any[],
+  params?: unknown[],
   maxRetries = 3
 ): Promise<QueryResult<T>> {
   let lastError: Error | undefined;
@@ -129,8 +131,6 @@ export async function initializeDatabase(): Promise<void> {
       console.log('Initializing database schema...');
       
       // Read the schema SQL file
-      const fs = require('fs');
-      const path = require('path');
       const schemaPath = path.join(process.cwd(), 'src', 'app', 'lib', 'schema.sql');
       const schemaSQL = fs.readFileSync(schemaPath, 'utf8');
       

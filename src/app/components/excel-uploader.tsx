@@ -5,12 +5,12 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
-import { Upload, FileSpreadsheet, AlertCircle, CheckCircle } from "lucide-react";
+import { Upload, FileSpreadsheet, AlertCircle } from "lucide-react";
 import * as XLSX from 'xlsx';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 interface ExcelUploaderProps {
-  onDataParsed: (data: any[]) => void;
+  onDataParsed: (data: ExcelRow[]) => void;
 }
 
 interface ExcelRow {
@@ -118,7 +118,7 @@ export function ExcelUploader({ onDataParsed }: ExcelUploaderProps) {
     });
   };
   
-  const validateExcelData = (data: any[]): { isValid: boolean; error?: string } => {
+  const validateExcelData = (data: ExcelRow[]): { isValid: boolean; error?: string } => {
     if (data.length === 0) {
       return { isValid: false, error: "The Excel file is empty" };
     }
@@ -155,54 +155,51 @@ export function ExcelUploader({ onDataParsed }: ExcelUploaderProps) {
         </Alert>
       )}
       
-      <Card className="border-dashed border-2 p-8">
-        <div className="flex flex-col items-center justify-center text-center">
-          <FileSpreadsheet className="h-12 w-12 text-muted-foreground mb-4" />
-          <h3 className="text-lg font-semibold mb-2">Upload Student Data</h3>
-          <p className="text-sm text-muted-foreground mb-4">
-            Upload an Excel file (.xlsx or .xls) with student information
-          </p>
-          
-          <div className="w-full max-w-md">
-            {isUploading ? (
-              <div className="space-y-2">
-                <Progress value={uploadProgress} />
-                <p className="text-sm text-muted-foreground">
-                  {uploadProgress === 100 ? "Processing file..." : "Uploading..."}
-                </p>
-              </div>
-            ) : (
-              <div className="space-y-4">
-                <Button
-                  variant="outline"
-                  className="w-full relative cursor-pointer"
-                  disabled={isUploading}
-                >
-                  <input
-                    type="file"
-                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                    accept=".xlsx,.xls"
-                    onChange={handleFileChange}
-                    onClick={(e) => {
-                      // Reset file input value to allow re-uploading the same file
-                      (e.target as HTMLInputElement).value = '';
-                    }}
-                  />
-                  <Upload className="mr-2 h-4 w-4" />
-                  Select Excel File
-                </Button>
-                
-                <div className="text-xs text-muted-foreground">
-                  <p className="font-semibold mb-1">Excel Format Requirements:</p>
-                  <ul className="list-disc pl-4 space-y-1">
-                    <li>Required columns: name, email, roll_number</li>
-                    <li>Optional columns: class_section</li>
-                    <li>Excel file (.xlsx or .xls) format</li>
-                  </ul>
-                </div>
-              </div>
-            )}
+      <Card className="p-6">
+        <div className="flex flex-col items-center justify-center space-y-4">
+          <div className="flex items-center justify-center w-12 h-12 rounded-full bg-primary/10">
+            <FileSpreadsheet className="h-6 w-6 text-primary" />
           </div>
+          
+          <div className="text-center space-y-2">
+            <h3 className="text-lg font-medium">Upload Student Data</h3>
+            <p className="text-sm text-muted-foreground">
+              Upload an Excel file (.xlsx or .xls) containing student information
+            </p>
+          </div>
+          
+          <div className="w-full max-w-xs">
+            <input
+              type="file"
+              id="excel-upload"
+              accept=".xlsx,.xls"
+              className="hidden"
+              onChange={handleFileChange}
+              disabled={isUploading}
+            />
+            <label htmlFor="excel-upload">
+              <Button
+                variant="outline"
+                className="w-full"
+                disabled={isUploading}
+                asChild
+              >
+                <span>
+                  <Upload className="mr-2 h-4 w-4" />
+                  {isUploading ? "Processing..." : "Select Excel File"}
+                </span>
+              </Button>
+            </label>
+          </div>
+          
+          {isUploading && (
+            <div className="w-full max-w-xs space-y-2">
+              <Progress value={uploadProgress} className="h-2" />
+              <p className="text-xs text-center text-muted-foreground">
+                {uploadProgress < 100 ? "Processing file..." : "Complete!"}
+              </p>
+            </div>
+          )}
         </div>
       </Card>
     </div>

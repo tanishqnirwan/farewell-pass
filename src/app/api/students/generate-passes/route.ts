@@ -104,7 +104,6 @@ export async function POST(request: Request) {
             email: student.email,
             rollNumber: student.roll_number,
             classSection: student.class_section,
-            qrCodeUrl: qrCodeUrl
           });
           
           // Send email

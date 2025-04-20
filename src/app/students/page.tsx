@@ -6,14 +6,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import {
   Card,
   CardContent,
   CardDescription,
@@ -21,12 +13,9 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Badge } from "@/components/ui/badge";
-import { Loader2, Upload, RefreshCw, CheckCircle, Search } from "lucide-react";
+import { Loader2, RefreshCw, CheckCircle, Search } from "lucide-react";
 import { toast } from "sonner";
 
-import { Progress } from "@/components/ui/progress";
 import { StudentTable } from "@/app/components/student-table";
 import { ExcelUploader } from "@/app/components/excel-uploader";
 import { NewStudentsReview } from "@/app/components/new-students-review";
@@ -42,11 +31,18 @@ interface Student {
   qr_code_url: string | null;
 }
 
+interface NewStudent {
+  name: string;
+  email: string;
+  roll_number: string;
+  class_section?: string;
+}
+
 export default function StudentsPage() {
   const [students, setStudents] = useState<Student[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
-  const [newStudents, setNewStudents] = useState<any[]>([]);
+  const [newStudents, setNewStudents] = useState<NewStudent[]>([]);
   const [selectedStudents, setSelectedStudents] = useState<string[]>([]);
   const [isGenerating, setIsGenerating] = useState(false);
   const [activeTab, setActiveTab] = useState("all-students");
@@ -73,7 +69,7 @@ export default function StudentsPage() {
     }
   };
 
-  const handleExcelData = (parsedData: any[]) => {
+  const handleExcelData = (parsedData: NewStudent[]) => {
     // Filter out students that already exist in the database
     const existingEmails = new Set(students.map(student => student.email.toLowerCase()));
     const existingRollNumbers = new Set(students.map(student => student.roll_number.toLowerCase()));
@@ -99,37 +95,36 @@ export default function StudentsPage() {
 
   const handleStudentCheckChange = (email: string, checked: boolean) => {
     if (checked) {
-      setSelectedStudents(prev => [...prev, email]);
+      setSelectedStudents([...selectedStudents, email]);
     } else {
-      setSelectedStudents(prev => prev.filter(e => e !== email));
+      setSelectedStudents(selectedStudents.filter(e => e !== email));
     }
   };
 
   const handleGeneratePasses = async () => {
     if (selectedStudents.length === 0) {
-      toast.error("Please select at least one student to generate passes");
+      toast.error("Please select at least one student");
       return;
     }
 
     setIsGenerating(true);
     try {
-      const selectedStudentData = newStudents.filter(student => 
-        selectedStudents.includes(student.email)
-      );
-
       const response = await fetch("/api/students/generate-passes", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ students: selectedStudentData }),
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          studentEmails: selectedStudents,
+        }),
       });
 
       const data = await response.json();
-      
       if (data.success) {
-        toast.success(`Successfully generated and sent passes to ${data.count} students`);
+        toast.success(`Successfully generated passes for ${selectedStudents.length} students`);
+        fetchStudents();
         setNewStudents([]);
         setSelectedStudents([]);
-        fetchStudents();
         setActiveTab("all-students");
       } else {
         toast.error(data.message || "Failed to generate passes");
@@ -142,146 +137,127 @@ export default function StudentsPage() {
     }
   };
 
-  const filteredStudents = students.filter(student => 
-    student.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    student.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    student.roll_number.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    (student.class_section && student.class_section.toLowerCase().includes(searchTerm.toLowerCase()))
+  const filteredStudents = students.filter(
+    (student) =>
+      student.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      student.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      student.roll_number.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      student.class_section.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   return (
-    <div className="container mx-auto py-8">
-      <Card className="mb-8">
-        <CardHeader>
-          <CardTitle className="text-2xl font-bold">Farewell Pass Manager</CardTitle>
-          <CardDescription>
-            Manage student passes for the farewell event
-          </CardDescription>
-        </CardHeader>
-      </Card>
+    <div className="container py-6 space-y-6">
+      <div className="flex justify-between items-center">
+        <h1 className="text-3xl font-bold">Students</h1>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={fetchStudents}
+            disabled={isLoading}
+          >
+            <RefreshCw className="h-4 w-4 mr-2" />
+            Refresh
+          </Button>
+        </div>
+      </div>
 
-      <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="mb-4">
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
+        <TabsList>
           <TabsTrigger value="all-students">All Students</TabsTrigger>
-          <TabsTrigger value="new-students">
-            Upload Students
-            {newStudents.length > 0 && (
-              <Badge variant="secondary" className="ml-2">
-                {newStudents.length}
-              </Badge>
-            )}
-          </TabsTrigger>
+          <TabsTrigger value="new-students">New Students</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="all-students">
-          <Card>
-            <CardHeader>
-              <CardTitle>Registered Students</CardTitle>
-              <CardDescription>
-                Students who have been registered for farewell passes
-              </CardDescription>
-              <div className="flex items-center mt-4">
-                <Search className="w-4 h-4 mr-2 text-muted-foreground" />
-                <Input
-                  placeholder="Search by name, email, roll number or class"
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="max-w-sm"
-                />
-                <Button 
-                  variant="outline" 
-                  onClick={fetchStudents} 
-                  className="ml-2"
-                  disabled={isLoading}
-                >
-                  {isLoading ? (
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  ) : (
-                    <RefreshCw className="h-4 w-4 mr-2" />
-                  )}
-                  Refresh
-                </Button>
-              </div>
-            </CardHeader>
-            <CardContent>
-              {isLoading ? (
-                <div className="flex flex-col items-center justify-center py-8">
-                  <Loader2 className="h-8 w-8 animate-spin text-primary mb-4" />
-                  <p>Loading students...</p>
-                </div>
-              ) : filteredStudents.length === 0 ? (
-                <div className="text-center py-8 text-muted-foreground">
-                  {searchTerm ? "No students match your search" : "No students registered yet"}
-                </div>
-              ) : (
-                <StudentTable students={filteredStudents} />
-              )}
-            </CardContent>
-          </Card>
+        <TabsContent value="all-students" className="space-y-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center w-full max-w-sm">
+              <Search className="w-4 h-4 mr-2 text-muted-foreground" />
+              <Input
+                placeholder="Search students..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+              />
+            </div>
+          </div>
+
+          {isLoading ? (
+            <div className="flex justify-center items-center h-64">
+              <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+            </div>
+          ) : (
+            <StudentTable students={filteredStudents} />
+          )}
         </TabsContent>
 
-        <TabsContent value="new-students">
+        <TabsContent value="new-students" className="space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle>Upload New Students</CardTitle>
+              <CardTitle>Import New Students</CardTitle>
               <CardDescription>
-                Upload an Excel file with new student data
+                Upload an Excel file with student information to add them to the system.
               </CardDescription>
             </CardHeader>
             <CardContent>
-              {newStudents.length === 0 ? (
-                <ExcelUploader onDataParsed={handleExcelData} />
-              ) : (
-                <div>
-                  <div className="flex justify-between items-center mb-4">
-                    <div className="flex items-center">
-                      <Checkbox 
-                        id="select-all" 
-                        checked={selectedStudents.length === newStudents.length}
+              <ExcelUploader onDataParsed={handleExcelData} />
+            </CardContent>
+          </Card>
+
+          {newStudents.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Review New Students</CardTitle>
+                <CardDescription>
+                  Select the students you want to add to the system.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-2">
+                      <Checkbox
+                        id="select-all"
+                        checked={
+                          newStudents.length > 0 &&
+                          newStudents.every((student) =>
+                            selectedStudents.includes(student.email)
+                          )
+                        }
                         onCheckedChange={handleSelectAllChange}
                       />
-                      <label htmlFor="select-all" className="ml-2 text-sm font-medium">
-                        Select All ({newStudents.length})
+                      <label
+                        htmlFor="select-all"
+                        className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                      >
+                        Select All
                       </label>
                     </div>
-                    <div className="space-x-2">
-                      <Button 
-                        variant="outline" 
-                        onClick={() => {
-                          setNewStudents([]);
-                          setSelectedStudents([]);
-                        }}
-                      >
-                        Cancel
-                      </Button>
-                      <Button 
-                        onClick={handleGeneratePasses}
-                        disabled={selectedStudents.length === 0 || isGenerating}
-                      >
-                        {isGenerating ? (
-                          <>
-                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                            Generating...
-                          </>
-                        ) : (
-                          <>
-                            <CheckCircle className="mr-2 h-4 w-4" />
-                            Generate & Send {selectedStudents.length} Passes
-                          </>
-                        )}
-                      </Button>
-                    </div>
+                    <Button
+                      onClick={handleGeneratePasses}
+                      disabled={selectedStudents.length === 0 || isGenerating}
+                    >
+                      {isGenerating ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Generating...
+                        </>
+                      ) : (
+                        <>
+                          <CheckCircle className="mr-2 h-4 w-4" />
+                          Generate Passes
+                        </>
+                      )}
+                    </Button>
                   </div>
 
-                  <NewStudentsReview 
+                  <NewStudentsReview
                     newStudents={newStudents}
                     selectedStudents={selectedStudents}
                     onStudentCheckChange={handleStudentCheckChange}
                   />
                 </div>
-              )}
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
+          )}
         </TabsContent>
       </Tabs>
     </div>

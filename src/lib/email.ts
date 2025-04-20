@@ -12,14 +12,12 @@ export const createEmailTemplate = ({
   name,
   email,
   rollNumber,
-  classSection,
-  qrCodeUrl
+  classSection
 }: {
   name: string;
   email: string;
   rollNumber: string;
   classSection?: string;
-  qrCodeUrl: string;
 }) => `
 <!DOCTYPE html>
 <html>
@@ -66,10 +64,47 @@ export const createEmailTemplate = ({
       </table>
     </div>
     
-    <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #e0e0e0;">
-      <p style="color: #666666; font-size: 14px; margin: 0; text-align: center;">This is an automated email. Please do not reply.</p>
+    <p style="color: #4a4a4a; font-size: 16px; line-height: 1.5;">If you have any questions, please contact the event organizers.</p>
+    
+    <div style="text-align: center; margin-top: 30px; padding-top: 20px; border-top: 1px solid #e0e0e0;">
+      <p style="color: #888888; font-size: 14px;">This is an automated email. Please do not reply.</p>
     </div>
   </div>
 </body>
 </html>
-`; 
+`;
+
+export const sendPassEmail = async (
+  to: string,
+  name: string,
+  rollNumber: string,
+  classSection: string | undefined,
+  qrCodePath: string
+) => {
+  const mailOptions = {
+    from: process.env.EMAIL_USER,
+    to,
+    subject: "Your Farewell Pass",
+    html: createEmailTemplate({
+      name,
+      email: to,
+      rollNumber,
+      classSection
+    }),
+    attachments: [
+      {
+        filename: "qr-code.png",
+        path: qrCodePath,
+        cid: "qr-code@farewell"
+      }
+    ]
+  };
+
+  try {
+    await transporter.sendMail(mailOptions);
+    return { success: true };
+  } catch (error) {
+    console.error("Error sending email:", error);
+    return { success: false, error };
+  }
+}; 
