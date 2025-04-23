@@ -1,24 +1,65 @@
 import nodemailer from 'nodemailer';
+
 import path from 'path';
 
+const afsanaLogoPath = path.join(process.cwd(), 'public', 'email', 'afsana.jpg');
+const ipuLogoPath = path.join(process.cwd(), 'public', 'email', 'ipu.jpg');
 
-const afsanaLogoPath = path.resolve('public/afsana.png');
-const universityLogoPath = path.resolve('public/ipu.png');
 export const transporter = nodemailer.createTransport({
-  service: "gmail",
+  service: 'gmail',
   auth: {
     user: process.env.EMAIL_USER,
     pass: process.env.EMAIL_PASSWORD,
   },
 });
 
-export const createEmailTemplate = ({
-
-  
+export const sendEventPassEmail = async ({
   name,
   email,
   rollNumber,
-  classSection
+  classSection,
+  qrCodeBuffer,
+}: {
+  name: string;
+  email: string;
+  rollNumber: string;
+  classSection?: string;
+  qrCodeBuffer: Buffer;
+}) => {
+  const html = generateEmailHTML({ name, email, rollNumber, classSection });
+
+  const mailOptions = {
+    from: `"Afsana 2025" <${process.env.EMAIL_USER}>`,
+    to: email,
+    subject: '🎟 Your E-Pass for Afsana 2025',
+    html,
+    attachments: [
+      {
+        filename: 'afsana.jpg',
+        path: afsanaLogoPath,
+        cid: 'afsana-logo',
+      },
+      {
+        filename: 'ipu.jpg',
+        path: ipuLogoPath,
+        cid: 'ipu-logo',
+      },
+      {
+        filename: 'qrcode.png',
+        content: qrCodeBuffer,
+        cid: 'qr-code',
+      },
+    ],
+  };
+
+  await transporter.sendMail(mailOptions);
+};
+
+const generateEmailHTML = ({
+  name,
+  email,
+  rollNumber,
+  classSection,
 }: {
   name: string;
   email: string;
@@ -28,160 +69,273 @@ export const createEmailTemplate = ({
 <!DOCTYPE html>
 <html>
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Your Farewell Pass - Afsana 2025</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <style>
-    @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&family=Montserrat:wght@300;400;500;600&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap');
+    body {
+      font-family: 'Poppins', sans-serif;
+      background: #fff0f5;
+      margin: 0;
+      padding: 0;
+      color: #333;
+    }
+
+    .card {
+      max-width: 600px;
+      margin: 30px auto;
+      background: #fff;
+      border-radius: 20px;
+      overflow: hidden;
+      box-shadow: 0 8px 25px rgba(0, 0, 0, 0.08);
+    }
+
+    .header {
+      background: linear-gradient(135deg, #ffe6f0 0%, #ffd6e8 100%);
+      padding: 30px;
+      text-align: center;
+      position: relative;
+    }
+
+    .header::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 5px;
+      background: linear-gradient(90deg, #ff6b6b, #ff8e8e, #ff6b6b);
+    }
+
+    .header img {
+      max-height: 100px;
+      margin-bottom: 15px;
+      filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.1));
+    }
+
+    .event {
+      background: linear-gradient(135deg, #fff5fa, #ffe8f0);
+      text-align: center;
+      padding: 25px;
+      position: relative;
+    }
+
+    .event::after {
+      content: '';
+      position: absolute;
+      bottom: 0;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 80%;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, #ffc4d6, transparent);
+    }
+
+    .event img {
+      max-height: 80px;
+      margin-bottom: 10px;
+      filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.1));
+    }
+
+    .event p {
+      font-size: 20px;
+      color: #c96b85;
+      margin: 0;
+      font-style: italic;
+      font-weight: 600;
+    }
+
+    .greeting {
+      text-align: center;
+      padding: 30px;
+      background: #fff;
+    }
+
+    .greeting h1 {
+      color: #9d3d5c;
+      font-size: 28px;
+      margin: 0;
+      font-weight: 700;
+    }
+
+    .greeting p {
+      color: #c96b85;
+      font-size: 18px;
+      margin: 10px 0 0;
+    }
+
+    .qr {
+      text-align: center;
+      padding: 30px;
+      background: #fff9fc;
+      position: relative;
+    }
+
+    .qr::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 2px;
+      background: linear-gradient(90deg, transparent, #ffc4d6, transparent);
+    }
+
+    .qr img {
+      width: 250px;
+      border-radius: 15px;
+      box-shadow: 0 8px 20px rgba(157, 61, 92, 0.2);
+      border: 4px solid #fff;
+    }
+
+    .qr p {
+      margin-top: 15px;
+      font-weight: 600;
+      color: #9d3d5c;
+      font-size: 18px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    .info {
+      padding: 25px 30px;
+      background: #fff;
+    }
+
+    .info h3 {
+      color: #9d3d5c;
+      margin-top: 0;
+      font-size: 22px;
+      border-bottom: 2px solid #ffd6e1;
+      padding-bottom: 10px;
+      font-weight: 600;
+    }
+
+    .info-table {
+      width: 100%;
+      margin-top: 15px;
+      border-collapse: collapse;
+    }
+
+    .info-table td {
+      padding: 10px 0;
+    }
+
+    .info-table td:first-child {
+      color: #c96b85;
+      font-weight: 600;
+      width: 40%;
+    }
+
+    .details {
+      padding: 25px 30px;
+      background: #fff9fc;
+    }
+
+    .details h3 {
+      color: #9d3d5c;
+      margin-top: 0;
+      font-size: 22px;
+      border-bottom: 2px solid #ffd6e1;
+      padding-bottom: 10px;
+      font-weight: 600;
+    }
+
+    .footer {
+      text-align: center;
+      background: linear-gradient(135deg, #ffe9f2, #ffd6e8);
+      padding: 25px;
+      font-size: 14px;
+      color: #555;
+    }
+
+    .credit {
+      margin-top: 15px;
+      display: inline-block;
+      background: linear-gradient(135deg, #9d3d5c, #7a2f47);
+      color: white;
+      padding: 12px 30px;
+      border-radius: 25px;
+      font-size: 14px;
+      font-weight: 600;
+      box-shadow: 0 4px 15px rgba(157, 61, 92, 0.2);
+    }
+
+    .developer-credit {
+      margin-top: 20px;
+      font-size: 12px;
+      color: #666;
+      line-height: 1.5;
+      background: linear-gradient(135deg, rgba(255, 255, 255, 0.8), rgba(255, 255, 255, 0.95));
+      padding: 12px 20px;
+      border-radius: 15px;
+      box-shadow: 0 2px 8px rgba(157, 61, 92, 0.08);
+      max-width: 300px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+
+    .developer-credit a {
+      color: #9d3d5c;
+      text-decoration: none;
+      font-weight: 600;
+      letter-spacing: 0.3px;
+    }
+
+    .developer-credit a:hover {
+      text-decoration: underline;
+    }
+
+    .developer-credit br {
+      margin: 4px 0;
+    }
   </style>
 </head>
-<body style="margin: 0; padding: 0; font-family: 'Montserrat', Arial, sans-serif; background-color: #f8f4f7;">
-  <div style="max-width: 650px; margin: 0 auto; background-color: #ffffff; padding: 0; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); overflow: hidden; margin-top: 20px; margin-bottom: 20px;">
-    <!-- Header with University Logo -->
-    <div style="background-color: #f9f2f5; padding: 25px; text-align: center; border-bottom: 1px solid #eee;">
-      <img src="cid:university-logo" alt="Guru Gobind Singh Indraprastha University" style="max-width: 400px; height: auto;">
+<body>
+  <div class="card">
+    <div class="header">
+      <img src="cid:ipu-logo" alt="GGSIPU Logo" />
     </div>
-    
-    <!-- Event Name Banner -->
-    <div style="background-color: #fff0f3; padding: 15px; text-align: center;">
-      <img src="cid:afsana-logo" alt="Afsana - Trail of Memories" style="max-width: 350px; height: auto;">
-      <p style="color: #c76b85; margin: 10px 0 0 0; font-size: 18px; font-style: italic; font-family: 'Playfair Display', serif;">Class of 2025 Farewell Celebration</p>
+    <div class="event">
+      <img src="cid:afsana-logo" alt="Afsana Logo" />
+      <p>Class of 2025 Farewell Celebration</p>
     </div>
-    
-    <!-- Main Content -->
-    <div style="padding: 30px 40px;">
-      <h2 style="color: #9d3d5c; margin: 0; font-family: 'Playfair Display', serif; font-size: 24px; text-align: center; margin-bottom: 25px; border-bottom: 2px solid #f5d0dd; padding-bottom: 10px;">Official Event Pass</h2>
-      
-      <p style="color: #5a5a5a; font-size: 16px; line-height: 1.6;">Dear <span style="font-weight: 500; color: #9d3d5c;">${name}</span>,</p>
-      
-      <p style="color: #5a5a5a; font-size: 16px; line-height: 1.6;">We're delighted to confirm your attendance at <strong>Afsana 2025</strong>. Please bring this digital pass with you to the event. The QR code below will be scanned at the entrance for verification.</p>
-      
-      <!-- QR Code Card -->
-      <div style="text-align: center; margin: 30px 0; background: linear-gradient(135deg, #fff8fa 0%, #fdf2f6 100%); padding: 25px; border-radius: 12px; border: 1px dashed #e6bccb;">
-        <div style="background-color: white; display: inline-block; padding: 15px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.05);">
-          <img src="cid:qr-code@farewell" alt="QR Code Pass" style="width: 200px; height: 200px;">
-        </div>
-        <p style="color: #9d3d5c; margin-top: 15px; font-size: 14px; font-weight: 500;">SCAN FOR ENTRY</p>
-      </div>
-      
-      <!-- Pass Details -->
-      <div style="background-color: #fdf8fa; border-radius: 10px; padding: 25px; margin: 25px 0; border-left: 4px solid #e6bccb;">
-        <h3 style="color: #9d3d5c; margin: 0 0 20px 0; font-family: 'Playfair Display', serif; font-size: 20px;">Attendee Information</h3>
-        <table style="width: 100%; border-collapse: collapse;">
-          <tr>
-            <td style="padding: 10px 5px; color: #5a5a5a; font-weight: 500; width: 35%;">Name:</td>
-            <td style="padding: 10px 5px; color: #5a5a5a;">${name}</td>
-          </tr>
-          <tr>
-            <td style="padding: 10px 5px; color: #5a5a5a; font-weight: 500;">Email:</td>
-            <td style="padding: 10px 5px; color: #5a5a5a;">${email}</td>
-          </tr>
-          <tr>
-            <td style="padding: 10px 5px; color: #5a5a5a; font-weight: 500;">Roll Number:</td>
-            <td style="padding: 10px 5px; color: #5a5a5a;">${rollNumber}</td>
-          </tr>
-          ${classSection ? `
-          <tr>
-            <td style="padding: 10px 5px; color: #5a5a5a; font-weight: 500;">Class/Section:</td>
-            <td style="padding: 10px 5px; color: #5a5a5a;">${classSection}</td>
-          </tr>
-          ` : ''}
-        </table>
-      </div>
-      
-      <!-- Event Information -->
-      <div style="background-color: #fdf8fa; border-radius: 10px; padding: 25px; margin: 25px 0; border-left: 4px solid #e6bccb;">
-        <h3 style="color: #9d3d5c; margin: 0 0 20px 0; font-family: 'Playfair Display', serif; font-size: 20px;">Event Details</h3>
-        <table style="width: 100%; border-collapse: collapse;">
-          <tr>
-            <td style="padding: 10px 5px; color: #5a5a5a; font-weight: 500; width: 35%;">Event:</td>
-            <td style="padding: 10px 5px; color: #5a5a5a;">Afsana 2025 - Farewell Celebration</td>
-          </tr>
-          <tr>
-            <td style="padding: 10px 5px; color: #5a5a5a; font-weight: 500;">Date & Time:</td>
-            <td style="padding: 10px 5px; color: #5a5a5a;">April 28, 2025 | 5:00 PM onwards</td>
-          </tr>
-          <tr>
-            <td style="padding: 10px 5px; color: #5a5a5a; font-weight: 500;">Venue:</td>
-            <td style="padding: 10px 5px; color: #5a5a5a;">GGSIPU Campus, Dwarka</td>
-          </tr>
-          <tr>
-            <td style="padding: 10px 5px; color: #5a5a5a; font-weight: 500;">Instructions:</td>
-            <td style="padding: 10px 5px; color: #5a5a5a;">Please arrive 30 minutes before the event starts. Bring a valid ID card.</td>
-          </tr>
-        </table>
-      </div>
-      
-      <p style="color: #5a5a5a; font-size: 16px; line-height: 1.6;">For any queries regarding the event, please contact the event coordinators. We look forward to celebrating with you!</p>
-      
-      <p style="color: #5a5a5a; font-size: 16px; line-height: 1.6; margin-top: 25px; text-align: center;">
-        <strong style="color: #9d3d5c;">Afsana 2025</strong><br>
-        <span style="font-style: italic;">Trail of Memories of the Batch of 2025</span>
-      </p>
+
+    <div class="greeting">
+      <h1>Hello ${name}!</h1>
+      <p>Your E-Pass is ready for Afsana 2025</p>
     </div>
-    
-    <!-- Footer with Improved Credit Section -->
-    <div style="text-align: center; padding: 25px; background-color: #fdf8fa; border-top: 1px solid #f5d0dd;">
-      <p style="color: #9d3d5c; margin: 0 0 10px 0; font-size: 15px;">GGSIPU Farewell 2025</p>
-      <p style="color: #888888; font-size: 13px; margin: 0;">This is an automated email. Please do not reply.</p>
-      
-      <!-- Styled Credit Section -->
-      <div style="margin-top: 20px; background: linear-gradient(135deg, #9d3d5c 0%, #7a2f47 100%); display: inline-block; padding: 10px 20px; border-radius: 30px; box-shadow: 0 3px 10px rgba(157, 61, 92, 0.2);">
-        <p style="color: white; margin: 0; font-size: 14px;">
-          Crafted with ❤️ by 
-          <a href="https://www.linkedin.com/in/tanishqnirwan" style="color: white; text-decoration: underline; font-weight: 500;">Tanishq Nirwan</a>
-        </p>
+
+    <div class="qr">
+      <img src="cid:qr-code" alt="QR Code" />
+      <p>Scan for Entry</p>
+    </div>
+
+    <div class="info">
+      <h3>Your Details</h3>
+      <table class="info-table">
+        <tr><td>Roll No:</td><td>${rollNumber}</td></tr>
+        <tr><td>Email:</td><td>${email}</td></tr>
+        ${classSection ? `<tr><td>Year:</td><td>${classSection}</td></tr>` : ''}
+      </table>
+    </div>
+
+    <div class="details">
+      <h3>Event Details</h3>
+      <table class="info-table">
+        <tr><td>Venue:</td><td>University Auditorium</td></tr>
+      </table>
+    </div>
+
+    <div class="footer">
+      This is an automated email. Do not reply.
+      <div class="credit">Auto-generated by Farewell Pass Manager</div>
+      <div class="developer-credit">
+        Developed by <a href="https://linkedin.com/in/tanishqnirwan" target="_blank">Tanishq Nirwan</a><br>
+        Chair - Software Development Cell, IPU EDC<br>
+        IIOT Batch of 2026
       </div>
-      <p style="font-size: 12px; color: #9d3d5c; margin-top: 10px; font-weight: 500;">
-        Chair, Software Development Cell – GGSIPU
-      </p>
     </div>
   </div>
 </body>
-</html>
-`;
-
-export const sendPassEmail = async (
-  to: string,
-  name: string,
-  rollNumber: string,
-  classSection: string | undefined,
-  qrCodePath: string
-) => {
-  const mailOptions = {
-    from: process.env.EMAIL_USER,
-    to,
-    subject: "Your Afsana 2025 Farewell Pass",
-    html: createEmailTemplate({
-      name,
-      email: to,
-      rollNumber,
-      classSection
-    }),
-    attachments: [
-      {
-        filename: "qr-code.png",
-        path: qrCodePath,
-        cid: "qr-code@farewell"
-      },
-      {
-        filename: "university-logo.png",
-        path: universityLogoPath,
-        cid: "university-logo"
-      },
-      {
-        filename: "afsana-logo.png",
-        path: afsanaLogoPath,
-        cid: "afsana-logo"
-      }
-    ]
-  };
-
-  try {
-    await transporter.sendMail(mailOptions);
-    return { success: true };
-  } catch (error) {
-    console.error("Error sending email:", error);
-    return { success: false, error };
-  }
-};
+</html>`;

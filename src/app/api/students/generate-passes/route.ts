@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 import QRCode from "qrcode";
 import { v4 as uuidv4 } from "uuid";
 import pool from "@/lib/db";
-import { transporter, createEmailTemplate } from "@/lib/email";
+import { sendEventPassEmail } from "@/lib/email";
 
 export async function POST(request: Request) {
   try {
@@ -81,11 +81,11 @@ export async function POST(request: Request) {
           });
           
           // Generate QR code with better quality settings
-          const qrCodeUrl = await QRCode.toDataURL(qrCodeData, {
+          const qrCodeBuffer = await QRCode.toBuffer(qrCodeData, {
             width: 500,
             margin: 2,
             errorCorrectionLevel: 'H',
-            type: 'image/png',
+            type: 'png',
           });
           
           // Create pass history record first
@@ -98,25 +98,13 @@ export async function POST(request: Request) {
           
           const historyId = historyResult.rows[0].id;
           
-          // Generate email HTML using the template
-          const emailHtml = createEmailTemplate({
+          // Send email with QR code
+          await sendEventPassEmail({
             name: student.name,
             email: student.email,
             rollNumber: student.roll_number,
             classSection: student.class_section,
-          });
-          
-          // Send email
-          await transporter.sendMail({
-            from: `"${process.env.EMAIL_FROM_NAME}" <${process.env.EMAIL_USER}>`,
-            to: student.email,
-            subject: "Your Farewell Pass",
-            html: emailHtml,
-            attachments: [{
-              filename: 'qr-code.png',
-              path: qrCodeUrl,
-              cid: 'qr-code@farewell' // Content ID for referencing in HTML
-            }]
+            qrCodeBuffer,
           });
           
           // Only update student record after email is sent successfully
@@ -126,7 +114,7 @@ export async function POST(request: Request) {
                  pass_generated_at = CURRENT_TIMESTAMP, 
                  qr_code_url = $1
              WHERE id = $2`,
-            [qrCodeUrl, studentId]
+            [qrCodeData, studentId]
           );
           
           // Update pass history status
